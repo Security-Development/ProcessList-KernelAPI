@@ -54,7 +54,8 @@ typedef NTSTATUS (WINAPI *Query)(
   _Out_opt_ PULONG                   ReturnLength
 );
 
-int main() {
+HANDLE GetProcessPID(wchar_t *ProcessName) {
+	HANDLE pid;
 	HMODULE ntdll = GetModuleHandleA("ntdll.dll");
 	HANDLE cmpPid = NULL;
 	Query qsi = (Query) GetProcAddress(ntdll, "ZwQuerySystemInformation");
@@ -66,18 +67,42 @@ int main() {
 	
 	PSYSTEM_PROCESS_INFORMATION SPI = (PSYSTEM_PROCESS_INFORMATION) buff;
 	buff += ((PSYSTEM_PROCESS_INFORMATION)SPI)->NextEntryOffset;
-
+	BOOLEAN check = FALSE;
+	printf("[*] Getting Process..\n");
+	
+	
 	while(true) {
 		SPI = (PSYSTEM_PROCESS_INFORMATION) buff;
 		
 		buff += ((PSYSTEM_PROCESS_INFORMATION)SPI)->NextEntryOffset;
-		printf("%ws => pid : %d\n", SPI->ImageName.Buffer, SPI->UniqueProcessId);
+		printf("[%ws] target Process : %ws\n", SPI->ImageName.Buffer, ProcessName);
+		
+		if( wcsicmp(SPI->ImageName.Buffer, ProcessName) == 0 ){
+			printf("- Find Target Process\n");
+			pid = SPI->UniqueProcessId;
+			check = TRUE;
+			break;
+		} 
+		
 		
 		if( SPI->UniqueProcessId == cmpPid)
 			break;
 		cmpPid = SPI->UniqueProcessId;
 		
 	}
+	
+	if( !check) {
+		printf("- Not Found TargetProcess...\n");	
+		return 0x00000000;
+	} else {
+		return pid;
+	}
+}
+
+int main() {
+	wchar_t input[32];
+	wscanf(L"%s", input);
+	printf("- pid : %d\n", GetProcessPID(input));
 	
 	
 	return 0;
